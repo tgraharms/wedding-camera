@@ -1,0 +1,11 @@
+name = "my-wedding-camera"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+# Secrets set via `wrangler pages secret put`. All seven are required — the
+# Functions read them in functions/_lib/supabase.ts (Env) and _lib/r2.ts, and a
+# missing R2_* var fails every upload at presign time:
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SESSION_SECRET,
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+#
+# Verify with: npx wrangler pages secret list --project-name=my-wedding-camera

@@ -1,0 +1,130 @@
+/* Approved Photo Album concept. Keep guest-only theme tokens off admin pages. */
+.guest-album {
+  --green: #613b2c;
+  --grey: #846450;
+  --gold: #99543e;
+  --gold-ink: #87452f;
+  --line: #e7d1ac;
+  --cream-2: #fffaf0;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-script: "Caveat", "Dancing Script", cursive;
+  font-family: var(--font-sans);
+  color: var(--green);
+  background-color: #fff3dd;
+  background-image: radial-gradient(#c8a56e22 .7px, transparent .7px);
+  background-size: 5px 5px;
+  min-height: 100dvh;
+  padding: calc(26px + var(--safe-t)) 24px calc(24px + var(--safe-b));
+}
+.guest-album .brand__names { font: 500 11px/1.5 var(--font-sans); letter-spacing: .15em; }
+.guest-album .brand__amp { color: #997947; }
+.guest-album .headline {
+  font: 500 clamp(46px, 13vw, 62px)/1.02 var(--font-script);
+  letter-spacing: -.035em;
+  max-width: 9ch;
+  margin: 27px auto 16px;
+  transform: rotate(-3deg);
+}
+.guest-album .headline__heart { color: #99543e; width: .38em; height: .38em; }
+.guest-album .sub { font: 400 14px/1.6 var(--font-sans); max-width: 28ch; }
+.guest-album .hero-img { margin: 16px auto 12px; filter: drop-shadow(0 8px 16px #775c3820); }
+.guest-album .btn {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 58px;
+  height: auto;
+  padding: 15px 16px;
+  gap: 9px;
+  font: 500 16px/1.4 var(--font-sans);
+  white-space: normal;
+  text-align: center;
+}
+.guest-album .btn > span { min-width: 0; overflow-wrap: anywhere; }
+.guest-album .btn svg { width: 22px; height: 22px; flex: 0 0 22px; }
+.guest-album .btn--primary { background: #99543e; color: #fffaf4; box-shadow: 0 6px 16px #6e3a2829; }
+.guest-album .btn--secondary { border: 1.5px solid #99543e; color: #87452f; background: transparent; }
+.guest-album .btn--compact { min-height: 44px; width: auto; padding: 8px 12px; font-size: 13px; }
+.guest-album .btn--compact svg { width: 18px; height: 18px; flex-basis: 18px; }
+.guest-album .status { font: 500 12px/1.5 var(--font-sans); }
+.guest-album .event-notice { margin: 8px auto; max-width: 24ch; font: 500 16px/1.6 var(--font-sans); text-align: center; text-wrap: balance; }
+.guest-album .headline--sm { font-size: 48px; max-width: none; text-align: left; margin: 22px 0 26px; }
+.guest-album .topbar .brand__names { font-size: 10px; letter-spacing: .07em; }
+.guest-note { position: relative; padding: 18px 16px 12px; margin: 0 2px 26px; background: #fffaf0; box-shadow: 0 3px 10px #70533712; }
+.guest-note::before { content: ""; position: absolute; width: 64px; height: 17px; background: #dcc498aa; left: calc(50% - 32px); top: -9px; transform: rotate(-7deg); }
+.guest-note .field { margin: 8px 0 0; }
+.guest-note .field + .field { margin-top: 16px; }
+.guest-note .field__label { margin: 0; font: 500 12px/1.4 var(--font-sans); color: var(--grey); }
+.guest-note .field__input { background: transparent; border: 0; border-bottom: 1px solid #dfcfac; border-radius: 0; padding: 7px 0; font: 400 16px/1.6 var(--font-sans); }
+.guest-note .field__input:focus { outline: 2px solid #99543e; outline-offset: 3px; box-shadow: none; }
+.guest-note textarea.field__input { min-height: 92px; overflow: hidden; resize: vertical; }
+.wish-count { display: block; margin-top: 6px; text-align: right; color: var(--grey); font: 400 11px/1.5 var(--font-sans); }
+.guest-album .grid { align-items: start; gap: 20px 16px; }
+.guest-album .grid img { height: auto; aspect-ratio: auto; object-fit: contain; padding: 7px 7px 23px; border-radius: 0; background: #fffdf7; box-shadow: 0 3px 8px #66432318; }
+.guest-album .grid > :nth-child(odd) { transform: rotate(-2deg); }
+.guest-album .grid > :nth-child(even) { transform: rotate(2deg); }
+@media (max-width: 350px) {
+  .guest-album { padding-left: 18px; padding-right: 18px; }
+  .guest-album .topbar { gap: 6px; }
+  .guest-album .topbar .brand__names { font-size: 9px; }
+}
+@media (min-width: 600px) {
+  /* This guest shell remains phone-sized even on desktop. */
+  .guest-album .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Mobile refinement: full viewport backdrop, compact content, optional motion. */
+body:has(.guest-album) {
+  background-color: #fff3dd;
+  background-image: radial-gradient(#c8a56e22 .7px, transparent .7px);
+  background-size: 5px 5px;
+}
+#root:has(.guest-album) { max-width: none; }
+.guest-album { background: transparent; }
+.guest-album.page--landing {
+  padding: calc(20px + var(--safe-t)) 18px calc(20px + var(--safe-b));
+  justify-content: center;
+}
+.guest-album.page--landing .brand__names { font-size: 13px; }
+.guest-album.page--landing .headline { font-size: clamp(52px, 14vw, 60px); margin: 14px auto 12px; }
+.guest-album.page--landing .sub { font-size: 15px; line-height: 1.5; }
+.guest-album .hero-img {
+  flex: none;
+  width: 100%;
+  height: clamp(143px, 30dvh, 248px);
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.guest-album .actions { margin-top: 0; padding-top: 0; gap: 10px; }
+/* Upload week (2026-10-01): Galeri Saya is the only secondary button, so it
+   runs full width at a size that reads as a real button, not a footnote. */
+.guest-album .secondary-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.guest-album .secondary-actions .btn {
+  min-height: 50px;
+  padding: 12px 16px;
+  gap: 7px;
+  font-size: 14px;
+  line-height: 1.4;
+  border-color: rgba(153, 84, 62, .38);
+}
+.guest-album .secondary-actions .btn span { white-space: nowrap; }
+.guest-album .secondary-actions .btn svg { width: 18px; height: 18px; flex-basis: 18px; }
+.guest-album .secondary-actions .btn:disabled {
+  color: #87452f;
+  border-color: rgba(153, 84, 62, .38);
+  background: transparent;
+  opacity: .42;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .guest-album.page--landing { animation: album-enter 550ms ease-out both; }
+  .guest-album .hero-img { animation: album-float 6s ease-in-out 800ms infinite; }
+  .guest-album .btn--first-photo { animation: album-breathe 2400ms ease-in-out 350ms infinite; }
+}
+@keyframes album-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes album-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes album-breathe {
+  0%, 75%, 100% { transform: scale(1); box-shadow: 0 6px 16px #6e3a2829; }
+  35% { transform: scale(1.035); box-shadow: 0 0 0 7px #99543e26, 0 8px 22px #6e3a2840; }
+}

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Kamera Majlis — diagnostics</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px 16px 60px; background: #faf6f2; color: #2a2320; line-height: 1.45; }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  h2 { font-size: .95rem; margin: 20px 0 6px; }
+  .muted { color: #6b625c; font-size: .82rem; margin: 0 0 12px; }
+  pre { background: #fff; border: 1px solid #e2d8d0; border-radius: 8px; padding: 10px; font-size: 12px; white-space: pre-wrap; word-break: break-word; margin: 0 0 10px; }
+  button { font-size: 16px; font-weight: 600; padding: 13px 18px; margin: 6px 8px 6px 0; border: none; border-radius: 10px; background: #b5835a; color: #fff; }
+  button.ghost { background: #6b625c; }
+  button:disabled { opacity: .45; }
+  .ok { color: #1d6b3a; font-weight: 600; }
+  .bad { color: #a3271f; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Diagnostics</h1>
+<p class="muted">Read-only checks plus a manual push for photos stuck in the queue. Safe to open at any time. Nothing here deletes a photo except a successful upload.</p>
+
+<h2>Environment</h2>
+<pre id="env">reading…</pre>
+
+<h2>Queue on this device</h2>
+<pre id="queue">reading…</pre>
+
+<h2>Actions</h2>
+<button id="refresh" class="ghost">Refresh</button>
+<button id="push">Force upload now</button>
+<button id="save" class="ghost">Save photos to phone</button>
+
+<h2>Log</h2>
+<pre id="log">—</pre>
+
+<script>
+const DB_NAME = "wc-uploads", STORE = "items";
+const $ = (id) => document.getElementById(id);
+const lines = [];
+function log(s, cls) {
+  lines.push(cls ? `<span class="${cls}">${s}</span>` : s);
+  $("log").innerHTML = lines.join("\n");
+}
+function openDb() {
+  return new Promise((res, rej) => {
+    let settled = false;
+    const t = setTimeout(() => { if (!settled) { settled = true; rej(new Error("indexedDB.open TIMED OUT after 5s (never fired success or error)")); } }, 5000);
+    let rq;
+    try { rq = indexedDB.open(DB_NAME, 1); } catch (e) { clearTimeout(t); settled = true; return rej(e); }
+    rq.onupgradeneeded = () => { try { rq.result.createObjectStore(STORE, { keyPath: "id" }); } catch (e) {} };
+    rq.onsuccess = () => { if (!settled) { settled = true; clearTimeout(t); res(rq.result); } };
+    rq.onerror = () => { if (!settled) { settled = true; clearTimeout(t); rej(rq.error || new Error("open error")); } };
+    rq.onblocked = () => { if (!settled) { settled = true; clearTimeout(t); rej(new Error("indexedDB.open BLOCKED")); } };
+  });
+}
+function tx(db, mode, fn) {
+  return new Promise((res, rej) => {
+    let t;
+    try { t = db.transaction(STORE, mode); } catch (e) { return rej(e); }
+    t.onabort = () => rej(t.error || new Error("transaction aborted"));
+    const r = fn(t.objectStore(STORE));
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error || new Error("request error"));
+  });
+}
+const getAll = (db) => tx(db, "readonly", (s) => s.getAll());
+
+async function readEnv() {
+  const ls = {};
+  try { for (const k of ["wc.sessionId", "wc.doneCount", "wc.profile"]) ls[k] = localStorage.getItem(k); }
+  catch (e) { ls.ERROR = String(e); }
+  let idbState = "unknown";
+  try { const db = await openDb(); idbState = "OPEN OK"; db.close(); } catch (e) { idbState = "FAILED: " + (e && e.message ? e.message : String(e)); }
+  let status = "not fetched";
+  try {
+    const r = await fetch("/api/status", { cache: "no-store" });
+    status = r.status + " " + (await r.text());
+  } catch (e) { status = "FETCH THREW: " + (e && e.message ? e.message : String(e)); }
+  $("env").textContent = JSON.stringify({
+    navigatorOnLine: navigator.onLine,
+    indexedDB: typeof indexedDB,
+    indexedDBOpen: idbState,
+    storageEstimate: "see below",
+    localStorage: ls,
+    apiStatus: status,
+    serviceWorker: navigator.serviceWorker ? (navigator.serviceWorker.controller ? "controlled" : "registered-not-controlling") : "unsupported",
+    userAgent: navigator.userAgent,
+    now: new Date().toISOString(),
+  }, null, 2);
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      $("env").textContent = $("env").textContent.replace('"storageEstimate": "see below"', '"storageEstimate": ' + JSON.stringify(est));
+    }
+  } catch (e) {}
+}
+
+async function readQueue() {
+  try {
+    const db = await openDb();
+    const items = await getAll(db);
+    db.close();
+    if (!items.length) { $("queue").textContent = "EMPTY — no photos waiting on this device."; return items; }
+    $("queue").textContent = items.map((i) => JSON.stringify({
+      id: String(i.id).slice(0, 8),
+      status: i.status,
+      attempts: i.attempts,
+      nextAttemptInSec: i.nextAttemptAt ? Math.round((i.nextAttemptAt - Date.now()) / 1000) : 0,
+      blobBytes: i.blob && i.blob.size,
+      blobType: i.blob && i.blob.type,
+      hasCheckpoint: !!i.uploaded,
+      capturedAt: i.metadata && i.metadata.capturedAt,
+      sessionId: i.metadata && i.metadata.sessionId,
+    })).join("\n");
+    return items;
+  } catch (e) {
+    $("queue").textContent = "COULD NOT READ QUEUE: " + (e && e.message ? e.message : String(e));
+    return [];
+  }
+}
+
+async function pushOne(item) {
+  const short = String(item.id).slice(0, 8);
+  const meta = item.metadata || {};
+  const sessionId = meta.sessionId || localStorage.getItem("wc.sessionId");
+  const capturedAt = meta.capturedAt || new Date().toISOString();
+  let storageKey, eventId;
+  if (item.uploaded) {
+    storageKey = item.uploaded.storageKey; eventId = item.uploaded.eventId;
+    log(`[${short}] resuming from checkpoint, skipping upload`);
+  } else {
+    const url = `/api/presign?size=${item.blob.size}&capturedAt=${encodeURIComponent(capturedAt)}&sessionId=${encodeURIComponent(sessionId)}`;
+    log(`[${short}] presign…`);
+    const pr = await fetch(url, { cache: "no-store" });
+    const ptext = await pr.text();
+    log(`[${short}] presign -> ${pr.status} ${ptext.slice(0, 160)}`);
+    if (!pr.ok) throw new Error("presign " + pr.status + " " + ptext);
+    const p = JSON.parse(ptext);
+    storageKey = p.storageKey; eventId = p.eventId;
+    log(`[${short}] PUT ${item.blob.size} bytes to R2…`);
+    const put = await fetch(p.uploadUrl, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: item.blob });
+    log(`[${short}] PUT -> ${put.status}`);
+    if (!put.ok) throw new Error("PUT " + put.status);
+    try {
+      const db = await openDb();
+      await tx(db, "readwrite", (s) => s.put({ ...item, uploaded: { storageKey, eventId } }));
+      db.close();
+      log(`[${short}] checkpoint saved`);
+    } catch (e) { log(`[${short}] checkpoint write failed: ${e.message}`, "bad"); }
+  }
+  log(`[${short}] register…`);
+  const rr = await fetch("/api/photos", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ eventId, storageKey, sessionId, capturedAt }),
+  });
+  const rtext = await rr.text();
+  log(`[${short}] register -> ${rr.status} ${rtext.slice(0, 160)}`);
+  if (!rr.ok) throw new Error("register " + rr.status + " " + rtext);
+  const db = await openDb();
+  await tx(db, "readwrite", (s) => s.delete(item.id));
+  db.close();
+  log(`[${short}] DONE — photo is on the server`, "ok");
+}
+
+$("refresh").onclick = async () => { lines.length = 0; log("refreshing…"); await readEnv(); await readQueue(); log("refreshed", "ok"); };
+
+$("push").onclick = async () => {
+  $("push").disabled = true;
+  lines.length = 0;
+  try {
+    const items = await readQueue();
+    if (!items.length) { log("Nothing queued on this device.", "ok"); return; }
+    log(`pushing ${items.length} item(s)…`);
+    let ok = 0, fail = 0;
+    for (const item of items) {
+      try { await pushOne(item); ok++; }
+      catch (e) { fail++; log(`[${String(item.id).slice(0, 8)}] FAILED: ${e && e.message ? e.message : String(e)}`, "bad"); }
+    }
+    log(`finished: ${ok} uploaded, ${fail} failed`, fail ? "bad" : "ok");
+    await readQueue();
+  } catch (e) {
+    log("push crashed: " + (e && e.message ? e.message : String(e)), "bad");
+  } finally { $("push").disabled = false; }
+};
+
+$("save").onclick = async () => {
+  try {
+    const items = await readQueue();
+    if (!items.length) { log("nothing to save", "bad"); return; }
+    for (const i of items) {
+      if (!i.blob) continue;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(i.blob);
+      a.download = `kamera-${String(i.id).slice(0, 8)}.jpg`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 30000);
+      log(`offered ${String(i.id).slice(0, 8)} for download`);
+    }
+  } catch (e) { log("save failed: " + (e && e.message ? e.message : String(e)), "bad"); }
+};
+
+(async () => { await readEnv(); await readQueue(); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "wedding-camera",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Guest photo-sharing PWA for a wedding: phones upload to Cloudflare R2, a private admin gallery, share links and wishes.",
+  "license": "UNLICENSED",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc -p functions/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "aws4fetch": "^1.0.20",
+    "client-zip": "^2.5.0",
+    "heic-to": "^1.5.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260617.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^4.1.9"
+  }
+}

@@ -1,0 +1,11 @@
+# Vite fingerprints everything under /assets, so a file's content can never
+# change under its name. sw.js, index.html and registerSW.js are NOT listed:
+# they must keep Cloudflare's default max-age=0, must-revalidate.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Keep every page out of search results (index.html carries the same as a
+# robots meta tag). Deliberately no robots.txt Disallow: a crawler must fetch a
+# page to see noindex, and some link-preview bots obey robots.txt.
+/*
+  X-Robots-Tag: noindex, nofollow
